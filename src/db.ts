@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+//4 Models
+
+//UserModel
 interface IUser {
     username: string;
     password: string;
@@ -9,6 +12,7 @@ interface IUser {
     comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
+//Content Model (Bookmarks)
 interface Content{
     title? : string;
     link : string;
@@ -16,9 +20,17 @@ interface Content{
     userId : mongoose.Types.ObjectId; // ObjectId referencing User
 }
 
+//Tag Model ( To Categorize BookMarks )
 interface ITag {
+    name: string;
+    color?: string; //For Getting a vibe for the BookMark link i had Added color. It is not compulsory to add the color in Schema.
+}
+
+//Share Model
+interface IShare {
     hash: string;
-    userId : mongoose.Types.ObjectId ;
+    userId: mongoose.Types.ObjectId;
+    createdAt?: Date;
 }
 
 const UserSchema = new mongoose.Schema<IUser>({
@@ -51,14 +63,32 @@ const ContentSchema  = new mongoose.Schema<Content>({
 }); 
 
 const TagSchema = new mongoose.Schema<ITag>({
-    hash : {
+    name: {
         type: String,
         required: true,
         unique: true,
         trim: true
     },
+    color: {
+        type: String,
+        default: '#007bff' //Prefer to User Choice you can put color or you just remove it. It Doesn't Matter
+    }
+});
+
+const ShareSchema = new mongoose.Schema<IShare>({
+    hash: {
+        type: String,
+        required: true,
+        unique: true,
+    },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
 }); 
 
@@ -93,3 +123,4 @@ UserSchema.methods.comparePassword = async function(candidatePassword: string): 
 export const UserModel = mongoose.model<IUser>('User', UserSchema);
 export const ContentModel = mongoose.model<Content>('Content', ContentSchema);
 export const TagModel = mongoose.model<ITag>('Tag', TagSchema);
+export const ShareModel = mongoose.model<IShare>('Share', ShareSchema);

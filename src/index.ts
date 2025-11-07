@@ -1,11 +1,12 @@
 import 'dotenv/config';
 import express from 'express';
-import { ContentModel, UserModel } from './db.js';
+import { ContentModel, ShareModel, TagModel, UserModel } from './db.js';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import { JWT_PASSWORD } from './config.js';
 import { z } from 'zod';
 import { userMiddleware } from './middleware.js';
+import { random } from './utils.js';
 
 // Zod schemas for input validation
 const userSchema = z.object({
@@ -121,6 +122,7 @@ app.post("/login", async (req, res) => {
     }
 });
 
+//Adding the Content for User
 app.post("/content", userMiddleware, async(req, res)=>{
     try {
         // Validate input using Zod schema
@@ -214,6 +216,103 @@ app.delete("/content", userMiddleware, async (req, res) => {
     }
 });
 
+//To Share
+app.post("/brain/share", userMiddleware, async (req, res) => {
+    try {
+        const { share } = req.body;
+        
+        if (share) {
+            // Enable sharing
+            const existingLink = await ShareModel.findOne({
+                userId: req.userId
+            });
+
+            if (existingLink) {
+                return res.json({
+                    status: "success",
+                    hash: existingLink.hash
+                });
+            }
+
+            // Create new share link
+            const hash = random(10);
+            await ShareModel.create({
+                userId: req.userId,
+                hash: hash
+            });
+
+            res.json({
+                status: "success",
+                hash,
+                message: "Share link created"
+            });
+        } else {
+            // Disable sharing
+            await ShareModel.deleteOne({
+                userId: req.userId
+            });
+
+            res.json({
+                status: "success",
+                message: "Share link removed"
+            });
+        }
+    } catch (error) {
+        console.error("Share error:", error);
+        res.status(500).json({
+            status: "error",
+            message: "Failed to process share request"
+        });
+    }
+});
+
+app.get("/brain/:shareLink", async (req, res) => {
+    try {
+        const hash = req.params.shareLink;
+        
+        // Find the share record (no authentication needed for public access)
+        const link = await ShareModel.findOne({ hash });
+
+        if (!link) {
+            return res.status(404).json({
+                status: "error",
+                message: "Share link not found"
+            });
+        }
+
+        // Get user's content
+        const content = await ContentModel.find({
+            userId: link.userId
+        }).populate("tags", "name color");
+        
+        // Get user info
+        const user = await UserModel.findOne({
+            _id: link.userId
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                status: "error",
+                message: "User not found"
+            });
+        }
+
+        res.json({
+            status: "success",
+            data: {
+                username: user.username,
+                content: content,
+                sharedAt: link.createdAt
+            }
+        });
+    } catch (error) {
+        console.error("Get shared content error:", error);
+        res.status(500).json({
+            status: "error",
+            message: "Failed to fetch shared content"
+        });
+    }
+});
 
 
 async function main(){
