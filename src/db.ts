@@ -17,8 +17,8 @@ interface Content{
 }
 
 interface ITag {
-    name: string;
-    color?: string;
+    hash: string;
+    userId : mongoose.Types.ObjectId ;
 }
 
 const UserSchema = new mongoose.Schema<IUser>({
@@ -51,15 +51,14 @@ const ContentSchema  = new mongoose.Schema<Content>({
 }); 
 
 const TagSchema = new mongoose.Schema<ITag>({
-    name: {
+    hash : {
         type: String,
         required: true,
         unique: true,
         trim: true
     },
-    color: {
-        type: String,
-        default: '#007bff'
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
     }
 }); 
 
